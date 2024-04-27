@@ -3,9 +3,6 @@ import cors from "cors";
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import myCustomerRoute from "./routes/MyCustomerRoute";
-import myRestaurantRoute from "./routes/MyRestaurantRoute";
-import restaurantRoute from "./routes/RestaurantRoute";
-import orderRoute from "./routes/OrderRoute";
 
 const prisma = new PrismaClient();
 
