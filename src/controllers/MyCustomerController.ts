@@ -22,7 +22,14 @@ const getCurrentCustomer = async (req: Request, res: Response) => {
 
 const createCurrentCustomer = async (req: Request, res: Response) => {
   try {
-    const { auth0Id } = req.body; // Assuming auth0Id is the unique identifier for the Google account
+    const { auth0Id, id, ...userData } = req.body; // Assuming auth0Id is the unique identifier for the Google account
+
+    // Check if the auth0Id is present in the request body
+    if (!auth0Id) {
+      return res
+        .status(400)
+        .json({ message: "auth0Id is missing in the request body" });
+    }
 
     // Check if the user already exists
     const existingCustomer = await prisma.customer.findFirst({
@@ -31,15 +38,23 @@ const createCurrentCustomer = async (req: Request, res: Response) => {
 
     if (existingCustomer) {
       // User already exists, return the existing user
+      console.log(
+        "Customer already exists. Returning existing customer:",
+        existingCustomer
+      );
       return res.status(200).json(existingCustomer);
     }
 
     // User doesn't exist, create a new user
-    const newCustomer = await prisma.customer.create({ data: req.body });
+    console.log("Creating new customer with data:", userData);
+    const newCustomer = await prisma.customer.create({
+      data: { ...userData, auth0Id },
+    });
 
+    console.log("New customer created:", newCustomer);
     res.status(201).json(newCustomer);
   } catch (error) {
-    console.log(error);
+    console.error("Error creating user:", error);
     res.status(500).json({ message: "Error creating user" });
   }
 };
