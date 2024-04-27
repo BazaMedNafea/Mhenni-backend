@@ -17,6 +17,6 @@ app.get("/health", async (req: Request, res: Response) => {
 
 app.use("/api/my/customer", myCustomerRoute);
 
-app.listen(10000, () => {
+app.listen(8080, () => {
   console.log("server started on localhost:8080");
 });
