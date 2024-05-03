@@ -13,14 +13,10 @@ const handleValidationErrors = async (
   next();
 };
 
-export const validateMyCustomerRequest = [
-  body("first_name").notEmpty().withMessage("First Name is required"),
-  body("last_name").notEmpty().withMessage("Last Name is required"),
-  body("addresses").isArray().withMessage("Addresses must be an array"),
-  body("addresses.*.street").notEmpty().withMessage("Street is required"),
-  body("addresses.*.city").notEmpty().withMessage("City is required"),
-  body("addresses.*.state").notEmpty().withMessage("State is required"),
-  body("addresses.*.zip").notEmpty().withMessage("Zip is required"),
+export const validateMyUserRequest = [
+  body("firstName").notEmpty().withMessage("First Name is required"),
+  body("lastName").notEmpty().withMessage("Last Name is required"),
+
   handleValidationErrors,
 ];
 export const validateMyRestaurantRequest = [

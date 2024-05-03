@@ -1,8 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+generator client {
+  provider = "prisma-client-js"
+}
 
 datasource db {
   provider  = "postgresql"
@@ -10,30 +8,39 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
+model User {
+  id        String    @id @default(uuid())
+  auth0Id   String?   @unique
+  email     String
+  password  String
+  firstName String?
+  lastName  String?
+  mobile    String?
+  image     String?
+  type      UserType  @default(Customer)
+  admin     Admin?
+  customer  Customer?
+  provider  Provider?
 }
 
-// Part 1: Provider Area
-model provider {
-  id                   Int     @id @default(autoincrement())
-  auth0Id              String
-  first_name           String
-  last_name            String
-  email                String
-  mobile_number        String
-  is_individual        Boolean
-  is_registered_office Boolean
-  office_address       String?
-  zip                  String
-  description          String?
+model Provider {
+  id                String               @id @default(uuid())
+  userId            String               @unique
+  providerId        Int?                 @unique
+  isIndividual      String?
+  isRegistredOffice String?
+  zip               String?
+  description       String?
+  providerRatings   Rating?
+  services          ServiceProviderMap[]
+  addresses         Address?             @relation("ProviderAddresses")
+  user              User                 @relation(fields: [userId], references: [id])
 
-  provider_rating      provider_rating[]
-  service_provider_map service_provider_map[]
+  @@map("providers")
 }
 
-model provider_rating {
-  provider_id        Int      @id
+model Rating {
+  provider_id        String   @id
   avg_punc_rating    Float
   avg_prof_rating    Float
   avg_eti_rating     Float
@@ -41,14 +48,12 @@ model provider_rating {
   avg_price_rating   Float
   avg_overall_rating Float
   last_updated_on    DateTime
-
-  provider provider @relation(fields: [provider_id], references: [id])
+  provider           Provider @relation(fields: [provider_id], references: [id])
 }
 
-model provider_review_log {
-  id                     Int                  @id @default(autoincrement())
-  service_appointment    service_appointment? @relation(fields: [service_appointment_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  service_appointment_id Int                  @unique
+model ReviewLog {
+  id                     Int         @id @default(autoincrement())
+  service_appointment_id Int         @unique
   punctuality_rating     Int
   proficiency_rating     Int
   etiquettes_rating      Int
@@ -57,102 +62,100 @@ model provider_review_log {
   overall_rating         Int
   review                 String?
   review_date            DateTime
+  service_appointment    Appointment @relation(fields: [service_appointment_id], references: [id], onDelete: Cascade)
 }
 
-// Part 2: Services Area
-model service_category {
+model Category {
   id            Int       @id @default(autoincrement())
   category_name String
   image         String
-  services      service[]
+  services      Service[]
 }
 
-model service {
-  id                  Int                    @id @default(autoincrement())
+model Service {
+  id                  Int                  @id @default(autoincrement())
   service_name        String
-  service_category_id Int // Foreign key referencing service_category.id
-  service_category    service_category       @relation(fields: [service_category_id], references: [id])
-  service_providers   service_provider_map[]
+  service_category_id Int
+  service_category    Category             @relation(fields: [service_category_id], references: [id])
+  service_providers   ServiceProviderMap[]
 }
 
-model service_provider_map {
-  id                    Int     @id @default(autoincrement())
-  service_id            Int
-  provider_id           Int
-  billing_rate_per_hour Float
-  experience_in_months  Int
-  service_offering_desc String?
-
-  service                service                 @relation(fields: [service_id], references: [id])
-  provider               provider                @relation(fields: [provider_id], references: [id])
-  service_delivery_offer service_delivery_offer? // One-to-one relationship with service_delivery_offer
+model ServiceProviderMap {
+  id                     Int            @id @default(autoincrement())
+  service_id             Int
+  provider_id            String
+  billing_rate_per_hour  Float
+  experience_in_months   Int
+  service_offering_desc  String?
+  service_delivery_offer DeliveryOffer?
+  provider               Provider       @relation(fields: [provider_id], references: [id])
+  service                Service        @relation(fields: [service_id], references: [id])
 }
 
-// Part 3: Customers Area
-model customer {
-  id              Int               @id @default(autoincrement())
-  auth0Id         String
-  first_name      String
-  second_name     String?
-  last_name       String
-  email           String
-  mobile_number   String
-  addresses       address[]
-  service_request service_request[]
+model Customer {
+  id        String    @id @default(dbgenerated("gen_random_uuid()"))
+  userId    String    @unique
+  user      User      @relation(fields: [userId], references: [id])
+  requests  Request[]
+  addresses Address[]
 }
 
-model address {
-  id              Int               @id @default(autoincrement())
-  customer_id     Int // Foreign key referencing customer.id
-  customer        customer          @relation(fields: [customer_id], references: [id])
-  street          String
-  city            String
-  state           String
-  zip             String
-  service_request service_request[]
+model Address {
+  id                 Int       @id @default(autoincrement())
+  street             String
+  city               String
+  wilaya             String
+  zip                String
+  customerId         String?
+  providerId         Int?      @unique
+  requests           Request[]
+  customer           Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  provider_addresses Provider? @relation("ProviderAddresses", fields: [providerId], references: [providerId])
+
+  @@map("addresses")
 }
 
-// Part 4: Service Delivery
-model service_delivery_offer {
-  id                      Int      @id @default(autoincrement())
+model DeliveryOffer {
+  id                      Int                @id @default(autoincrement())
   service_request_id      Int
-  service_provider_map_id Int      @unique // Add @unique attribute here
+  service_provider_map_id Int                @unique
   discount_in_percentage  Float?
   is_offer_accepted       Boolean?
-
-  service_request      service_request       @relation(fields: [service_request_id], references: [id])
-  service_provider_map service_provider_map  @relation(fields: [service_provider_map_id], references: [id])
-  service_appointment  service_appointment[] // One-to-many relationship with service_appointment
+  service_appointment     Appointment[]
+  service_provider_map    ServiceProviderMap @relation(fields: [service_provider_map_id], references: [id])
+  service_request         Request            @relation(fields: [service_request_id], references: [id])
 }
 
-model service_request {
-  id                     Int                      @id @default(autoincrement())
-  customer_id            Int
+model Request {
+  id                     Int             @id @default(autoincrement())
+  customer_id            String
   address_id             Int
   service_id             Int
   requirement_desc       String?
   expected_start_time    DateTime
-  address                address                  @relation(fields: [address_id], references: [id])
-  customer               customer                 @relation(fields: [customer_id], references: [id])
-  service_delivery_offer service_delivery_offer[]
+  service_delivery_offer DeliveryOffer[]
+  address                Address         @relation(fields: [address_id], references: [id])
+  customer               Customer        @relation(fields: [customer_id], references: [id])
 }
 
-model service_appointment {
-  id                        Int       @id @default(autoincrement())
+model Appointment {
+  id                        Int           @id @default(autoincrement())
   service_delivery_offer_id Int
   service_deliver_on        DateTime
   service_start_time        DateTime
   service_end_time          DateTime?
-
-  service_delivery_offer service_delivery_offer @relation(fields: [service_delivery_offer_id], references: [id])
-  provider_review_log    provider_review_log? // One-to-one relationship with provider_review_log
+  service_delivery_offer    DeliveryOffer @relation(fields: [service_delivery_offer_id], references: [id])
+  provider_review_log       ReviewLog?
 }
 
-//PART 5: Admin Area
+model Admin {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+}
 
-model admin {
-  id       Int     @id @default(autoincrement())
-  password String
-  email    String
-  image    String?
+enum UserType {
+  Admin
+  Provider
+  Customer
 }
