@@ -17,7 +17,7 @@ model User {
   lastName  String?
   mobile    String?
   image     String?
-  type      UserType  @default(Customer)
+  type      UserType?
   admin     Admin?
   customer  Customer?
   provider  Provider?
@@ -26,14 +26,13 @@ model User {
 model Provider {
   id                String               @id @default(uuid())
   userId            String               @unique
-  providerId        Int?                 @unique
   isIndividual      String?
   isRegistredOffice String?
   zip               String?
   description       String?
   providerRatings   Rating?
   services          ServiceProviderMap[]
-  addresses         Address?             @relation("ProviderAddresses")
+  addresses         Address[]            @relation("ProviderAddresses")
   user              User                 @relation(fields: [userId], references: [id])
 
   @@map("providers")
@@ -101,18 +100,16 @@ model Customer {
 }
 
 model Address {
-  id                 Int       @id @default(autoincrement())
-  street             String
-  city               String
-  wilaya             String
-  zip                String
-  customerId         String?
-  providerId         Int?      @unique
-  requests           Request[]
-  customer           Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  provider_addresses Provider? @relation("ProviderAddresses", fields: [providerId], references: [providerId])
-
-  @@map("addresses")
+  id         Int       @id @default(autoincrement())
+  street     String
+  city       String
+  wilaya     String
+  zip        String
+  customerId String?
+  providerId String? // Add the providerId field here
+  requests   Request[]
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  provider   Provider? @relation("ProviderAddresses", fields: [providerId], references: [id])
 }
 
 model DeliveryOffer {

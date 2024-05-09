@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { PrismaClient, User, Address } from "@prisma/client";
+import { PrismaClient, User, Address, UserType } from "@prisma/client";
 import bcrypt from "bcrypt"; // Import bcrypt for password hashing
 const prisma = new PrismaClient();
 
@@ -9,9 +9,9 @@ const registerUser = async (req: Request, res: Response) => {
       req.body;
 
     // Check if email and type are present in the request body
-    if (!email || !type) {
+    if (!email) {
       return res.status(400).json({
-        message: "Email or type is missing in the request body",
+        message: "Email is missing in the request body",
       });
     }
 
@@ -43,11 +43,8 @@ const registerUser = async (req: Request, res: Response) => {
         lastName,
         image,
         password: hashedPassword, // Store hashed password if provided
-        type,
+        type: type || null, //
         auth0Id,
-        customer: {
-          create: {}, // Create an empty customer record
-        },
       },
     });
 
@@ -63,7 +60,10 @@ const getCurrentUser = async (req: Request, res: Response) => {
     // Assuming req.auth0Id contains the auth0Id of the user
     const currentCustomer = await prisma.user.findFirst({
       where: { auth0Id: req.auth0Id }, // Query based on auth0Id
-      include: { customer: { include: { addresses: true } } },
+      include: {
+        customer: { include: { addresses: true } },
+        provider: { include: { addresses: true } },
+      },
     });
     if (!currentCustomer) {
       return res.status(404).json({ message: "Customer not found" });
@@ -78,7 +78,7 @@ const getCurrentUser = async (req: Request, res: Response) => {
 
 const updateCurrentUser = async (req: Request, res: Response) => {
   try {
-    const { firstName, lastName, addresses, auth0Id } = req.body;
+    const { firstName, lastName, addresses, auth0Id, type } = req.body;
 
     if (!auth0Id) {
       return res.status(400).json({ message: "auth0Id is required" });
@@ -87,34 +87,71 @@ const updateCurrentUser = async (req: Request, res: Response) => {
     // Update user information
     const updatedUser = await prisma.user.update({
       where: { auth0Id },
-      data: {
-        firstName,
-        lastName,
-        customer: {
-          update: {
-            addresses: {
-              deleteMany: {}, // Delete all existing addresses
-              create: addresses
-                ? addresses.map((address: Address) => ({
-                    street: address.street,
-                    city: address.city,
-                    wilaya: address.wilaya,
-                    zip: address.zip,
-                  }))
-                : [], // Create new addresses
-            },
-          },
-        },
-      },
+      data: { firstName, lastName, type }, // Include the 'type' field
       include: {
-        customer: {
-          include: {
-            addresses: true,
-          },
-        },
+        customer: true,
+        provider: true,
       },
     });
 
+    // If the user is of type 'Customer'
+    if (type === UserType.Customer) {
+      // Create a customer record if it doesn't exist
+      if (!updatedUser.customer) {
+        const newCustomer = await prisma.customer.create({
+          data: {
+            userId: updatedUser.id,
+          },
+        });
+        updatedUser.customer = newCustomer;
+      }
+    }
+
+    // If the user is of type 'Provider'
+    if (type === UserType.Provider) {
+      // Create a provider record if it doesn't exist
+      if (!updatedUser.provider) {
+        const newProvider = await prisma.provider.create({
+          data: {
+            userId: updatedUser.id,
+          },
+        });
+        updatedUser.provider = newProvider;
+      }
+    }
+
+    // Update addresses if provided
+    if (addresses && addresses.length > 0) {
+      const customerId = updatedUser.customer?.id ?? null;
+      const providerId = updatedUser.provider?.id ?? null;
+
+      // Find the existing address for the user
+      const existingAddress = await prisma.address.findFirst({
+        where: {
+          customerId,
+          providerId,
+        },
+      });
+
+      if (existingAddress) {
+        // Update the existing address
+        await prisma.address.update({
+          where: { id: existingAddress.id },
+          data: addresses[0], // Assuming only one address is provided
+        });
+      } else {
+        // Create a new address
+        await prisma.address.create({
+          data: {
+            ...addresses[0], // Assuming only one address is provided
+            customerId,
+            providerId,
+          },
+        });
+      }
+    }
+
+    // Return the updated user
     res.json(updatedUser);
   } catch (error) {
     console.log(error);
@@ -122,8 +159,29 @@ const updateCurrentUser = async (req: Request, res: Response) => {
   }
 };
 
+const updateUserType = async (req: Request, res: Response) => {
+  try {
+    const { auth0Id, type } = req.body;
+
+    if (!auth0Id || !type) {
+      return res.status(400).json({ message: "auth0Id and type are required" });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { auth0Id },
+      data: { type },
+    });
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Error updating user type" });
+  }
+};
+
 export default {
   registerUser,
   getCurrentUser,
   updateCurrentUser,
+  updateUserType,
 };

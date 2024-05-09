@@ -18,4 +18,5 @@ router.put(
   MyUserController.updateCurrentUser
 );
 
+router.put("/type", MyUserController.updateUserType);
 export default router;
