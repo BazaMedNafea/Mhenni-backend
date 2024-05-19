@@ -30,12 +30,11 @@ model Provider {
   isRegistredOffice String?
   zip               String?
   description       String?
-  providerRatings   Rating?
-  services          ServiceProviderMap[]
   addresses         Address[]            @relation("ProviderAddresses")
   user              User                 @relation(fields: [userId], references: [id])
-
-  @@map("providers")
+  providerRatings   Rating?
+  Request           Request[]
+  services          ServiceProviderMap[]
 }
 
 model Rating {
@@ -75,6 +74,7 @@ model Service {
   id                  Int                  @id @default(autoincrement())
   service_name        String
   service_category_id Int
+  Request             Request[]
   service_category    Category             @relation(fields: [service_category_id], references: [id])
   service_providers   ServiceProviderMap[]
 }
@@ -94,9 +94,9 @@ model ServiceProviderMap {
 model Customer {
   id        String    @id @default(dbgenerated("gen_random_uuid()"))
   userId    String    @unique
+  addresses Address[]
   user      User      @relation(fields: [userId], references: [id])
   requests  Request[]
-  addresses Address[]
 }
 
 model Address {
@@ -106,10 +106,10 @@ model Address {
   wilaya     String
   zip        String
   customerId String?
-  providerId String? // Add the providerId field here
-  requests   Request[]
+  providerId String?
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
   provider   Provider? @relation("ProviderAddresses", fields: [providerId], references: [id])
+  requests   Request[]
 }
 
 model DeliveryOffer {
@@ -124,15 +124,23 @@ model DeliveryOffer {
 }
 
 model Request {
-  id                     Int             @id @default(autoincrement())
-  customer_id            String
-  address_id             Int
-  service_id             Int
-  requirement_desc       String?
-  expected_start_time    DateTime
-  service_delivery_offer DeliveryOffer[]
-  address                Address         @relation(fields: [address_id], references: [id])
-  customer               Customer        @relation(fields: [customer_id], references: [id])
+  id                    Int             @id @default(autoincrement())
+  customer_id           String
+  service_id            Int
+  requirement_desc      String?
+  expected_start_time   DateTime
+  addressId             Int?
+  custom_address_city   String?
+  custom_address_street String?
+  custom_address_wilaya String?
+  custom_address_zip    String?
+  providerId            String?
+  state                 RequestState // Add state field
+  DeliveryOffer         DeliveryOffer[]
+  Address               Address?        @relation(fields: [addressId], references: [id])
+  customer              Customer        @relation(fields: [customer_id], references: [id])
+  provider              Provider?       @relation(fields: [providerId], references: [id])
+  service               Service         @relation(fields: [service_id], references: [id])
 }
 
 model Appointment {
@@ -155,4 +163,12 @@ enum UserType {
   Admin
   Provider
   Customer
+}
+
+enum RequestState {
+  PENDING
+  ACCEPTED
+  COMPLETED
+  CANCELED
+  // Add more states as needed
 }

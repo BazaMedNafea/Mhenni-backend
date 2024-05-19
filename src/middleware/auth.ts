@@ -16,140 +16,6 @@ declare global {
   }
 }
 
-export const authenticateCustomerJwt = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  const { authorization } = req.headers;
-
-  if (!authorization || !authorization.startsWith("Bearer ")) {
-    return res.sendStatus(401);
-  }
-
-  const token = authorization.split(" ")[1];
-
-  try {
-    const decoded = jwt.verify(token, "customer_secret_key") as jwt.JwtPayload;
-    const auth0Id = decoded.sub;
-
-    // Use findFirst with custom criteria
-    const customer = await prisma.user.findFirst({
-      where: {
-        auth0Id: {
-          equals: auth0Id,
-        },
-      },
-    });
-
-    if (!customer) {
-      return res.sendStatus(401);
-    }
-
-    req.auth0Id = auth0Id as string;
-    req.customerId = customer.id.toString(); // Assuming `id` is the correct field for user ID
-    next();
-  } catch (error) {
-    return res.sendStatus(401);
-  }
-};
-
-export const authenticateProviderJwt = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  const { authorization } = req.headers;
-
-  if (!authorization || !authorization.startsWith("Bearer ")) {
-    return res.sendStatus(401);
-  }
-
-  const token = authorization.split(" ")[1];
-
-  try {
-    const decoded = jwt.verify(token, "provider_secret_key") as jwt.JwtPayload;
-    const auth0Id = decoded.sub;
-
-    // Use findFirst with custom criteria
-    const provider = await prisma.user.findFirst({
-      where: {
-        auth0Id: {
-          equals: auth0Id,
-        },
-      },
-    });
-
-    if (!provider) {
-      return res.sendStatus(401);
-    }
-
-    req.auth0Id = auth0Id as string;
-    req.providerId = provider.id.toString(); // Assuming `id` is the correct field for user ID
-    next();
-  } catch (error) {
-    return res.sendStatus(401);
-  }
-};
-
-export const authenticateJwt = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  const { authorization } = req.headers;
-
-  if (!authorization || !authorization.startsWith("Bearer ")) {
-    return res.sendStatus(401);
-  }
-
-  const token = authorization.split(" ")[1];
-
-  try {
-    const decoded = jwt.verify(token, "your_secret_key") as jwt.JwtPayload;
-    const auth0Id = decoded.sub;
-
-    // Use findFirst with custom criteria
-    const customer = await prisma.user.findFirst({
-      where: {
-        auth0Id: {
-          equals: auth0Id,
-        },
-      },
-    });
-
-    if (!customer) {
-      return res.sendStatus(401);
-    }
-
-    req.auth0Id = auth0Id as string;
-    req.customerId = customer.id.toString(); // Assuming `id` is the correct field for user ID
-    next();
-  } catch (error) {
-    return res.sendStatus(401);
-  }
-};
-
-export const isAuthenticated = (): boolean => {
-  const token = localStorage.getItem("token");
-
-  if (!token) {
-    return false;
-  }
-
-  try {
-    // Verify the token
-    const decoded = jwt.verify(token, "your_secret_key");
-
-    // You can add additional checks here, like checking for token expiration, audience, etc.
-
-    return true;
-  } catch (error) {
-    // Token is invalid or expired
-    return false;
-  }
-};
-
 export const jwtCheck = auth({
   audience: process.env.AUTH0_AUDIENCE,
   issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
@@ -173,21 +39,35 @@ export const jwtParse = async (
     const decoded = jwt.decode(token) as jwt.JwtPayload;
     const auth0Id = decoded.sub;
 
-    // Use findFirst with custom criteria
-    const customer = await prisma.user.findFirst({
+    // Query the database to get the user based on auth0Id
+    const user = await prisma.user.findFirst({
       where: {
         auth0Id: {
           equals: auth0Id,
         },
       },
+      include: {
+        provider: true, // Include the provider relation
+        customer: true, // Include the customer relation
+      },
     });
 
-    if (!customer) {
+    if (!user) {
       return res.sendStatus(401);
     }
 
     req.auth0Id = auth0Id as string;
-    req.customerId = customer.id.toString(); // Assuming `id` is the correct field for user ID
+
+    // Assign customerId from the customer relation
+    if (user.customer) {
+      req.customerId = user.customer.id.toString();
+    }
+
+    // Extract providerId if user is a provider
+    if (user.provider) {
+      req.providerId = user.provider.id.toString();
+    }
+
     next();
   } catch (error) {
     return res.sendStatus(401);
