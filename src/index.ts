@@ -17,6 +17,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.get("/", (req, res) => res.send("Express on Vercel"));
+
 app.get("/health", async (req: Request, res: Response) => {
   res.send({ message: "health OK!" });
 });
@@ -32,3 +34,5 @@ app.use("/api/my/orders", MyOrdersRoute);
 app.listen(8080, () => {
   console.log("server started on localhost:8080");
 });
+
+module.exports = app;
