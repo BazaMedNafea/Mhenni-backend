@@ -7,7 +7,8 @@
     "dev": "concurrently \"nodemon\" \"npm run stripe\"",
     "build": "npm install && npx tsc",
     "start": "node dist/index.js",
-    "stripe": "stripe listen --forward-to localhost:7000/api/order/checkout/webhook"
+    "stripe": "stripe listen --forward-to localhost:7000/api/order/checkout/webhook",
+    "vercel-build": "npm run build && npx prisma generate"
   },
   "keywords": [],
   "author": "",

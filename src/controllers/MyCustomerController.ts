@@ -1,24 +1,17 @@
 import { Request, Response } from "express";
-import { PrismaClient, RequestState } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 const addServiceRequest = async (req: Request, res: Response) => {
   try {
-    const {
-      serviceId,
-      requirementDesc,
-      expectedStartDate,
-      expectedStartTime,
-      providerId,
-      customAddress,
-    } = req.body;
+    const { serviceId, requirementDesc, providerId, customAddress } = req.body;
 
     // Get the customerId from the authenticated user's information
     const customerId = req.customerId;
 
     // Validate input data
-    if (!customerId || !serviceId || !expectedStartTime) {
+    if (!customerId || !serviceId) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
@@ -40,13 +33,12 @@ const addServiceRequest = async (req: Request, res: Response) => {
         customer: { connect: { id: customerId } },
         service: { connect: { id: serviceId } },
         requirement_desc: requirementDesc,
-        expected_start_time: expectedStartTime,
         provider: { connect: { id: providerId } },
         custom_address_street: customAddress?.street,
         custom_address_city: customAddress?.city,
         custom_address_wilaya: customAddress?.wilaya,
         custom_address_zip: customAddress?.zip,
-        state: RequestState.PENDING, // Set initial state
+        state: "REQUESTED", // Set initial state
       },
     });
 

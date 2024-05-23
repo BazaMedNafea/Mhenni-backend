@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { PrismaClient, User, Address, UserType } from "@prisma/client";
 import bcrypt from "bcrypt"; // Import bcrypt for password hashing
+import cloudinary from "cloudinary";
+
 const prisma = new PrismaClient();
 
 const registerUser = async (req: Request, res: Response) => {
@@ -179,9 +181,43 @@ const updateUserType = async (req: Request, res: Response) => {
   }
 };
 
+const updateUserProfilePicture = async (req: Request, res: Response) => {
+  try {
+    const image = req.file as Express.Multer.File;
+    if (!image) {
+      return res.status(400).json({ message: "No image provided" });
+    }
+
+    const base64Image = Buffer.from(image.buffer).toString("base64");
+    const dataURI = `data:${image.mimetype};base64,${base64Image}`;
+
+    // Upload image to Cloudinary
+    const uploadResponse = await cloudinary.v2.uploader.upload(dataURI);
+
+    // Get the auth0Id from the request (assuming it's set in the middleware)
+    const { auth0Id } = req;
+
+    if (!auth0Id) {
+      return res.status(400).json({ message: "auth0Id is required" });
+    }
+
+    // Update the user's image with the Cloudinary URL
+    const updatedUser = await prisma.user.update({
+      where: { auth0Id },
+      data: { image: uploadResponse.secure_url },
+    });
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Error updating user profile picture" });
+  }
+};
+
 export default {
   registerUser,
   getCurrentUser,
   updateCurrentUser,
   updateUserType,
+  updateUserProfilePicture,
 };
