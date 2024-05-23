@@ -137,7 +137,50 @@ const getServicesByCategory = async (req: Request, res: Response) => {
   }
 };
 
+const getServiceProviderMapById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const serviceProviderMap = await prisma.serviceProviderMap.findUnique({
+      where: {
+        id: parseInt(id),
+      },
+      include: {
+        service: {
+          include: {
+            service_category: true,
+          },
+        },
+        provider: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+            addresses: true,
+          },
+        },
+        service_delivery_offer: true,
+      },
+    });
+
+    if (!serviceProviderMap) {
+      return res
+        .status(404)
+        .json({ message: "Service provider map not found" });
+    }
+
+    res.json(serviceProviderMap);
+  } catch (error) {
+    console.error("Error fetching service provider map:", error);
+    res.status(500).json({ message: "Error fetching service provider map" });
+  }
+};
+
 export default {
   getServicesByCategory,
   getServiceProviderMapList,
+  getServiceProviderMapById, // Add this line to export the new function
 };

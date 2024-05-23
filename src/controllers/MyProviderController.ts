@@ -13,22 +13,58 @@ const addServiceForProvider = async (req: Request, res: Response) => {
     } = req.body;
     const providerId = req.providerId; // Extract providerId from authentication token
 
+    // Convert serviceId to integer
+    const serviceIdInt = parseInt(serviceId, 10);
+
+    if (isNaN(serviceIdInt)) {
+      return res.status(400).json({ message: "Invalid service ID" });
+    }
+
+    // Convert billingRatePerHour to float
+    const billingRatePerHourFloat = parseFloat(billingRatePerHour);
+
+    if (isNaN(billingRatePerHourFloat)) {
+      return res.status(400).json({ message: "Invalid billing rate per hour" });
+    }
+
+    // Convert experienceInMonths to integer
+    const experienceInMonthsInt = parseInt(experienceInMonths, 10);
+
+    if (isNaN(experienceInMonthsInt)) {
+      return res.status(400).json({ message: "Invalid experience in months" });
+    }
+
     // Check if the service exists
     const existingService = await prisma.service.findUnique({
-      where: { id: serviceId },
+      where: { id: serviceIdInt },
     });
 
     if (!existingService) {
       return res.status(404).json({ message: "Service not found" });
     }
 
+    // Check if the provider already offers this service
+    const existingServiceProviderMap =
+      await prisma.serviceProviderMap.findFirst({
+        where: {
+          service_id: serviceIdInt,
+          provider_id: providerId,
+        },
+      });
+
+    if (existingServiceProviderMap) {
+      return res
+        .status(400)
+        .json({ message: "You already offers this service" });
+    }
+
     // Create a new service provider map
     const serviceProviderMap = await prisma.serviceProviderMap.create({
       data: {
-        service_id: serviceId,
+        service_id: serviceIdInt,
         provider_id: providerId, // Associate the service with the authenticated provider
-        billing_rate_per_hour: billingRatePerHour,
-        experience_in_months: experienceInMonths,
+        billing_rate_per_hour: billingRatePerHourFloat,
+        experience_in_months: experienceInMonthsInt,
         service_offering_desc: serviceOfferingDesc,
       },
     });
@@ -83,7 +119,99 @@ const getProviderRequests = async (req: Request, res: Response) => {
   }
 };
 
+const getProviderServices = async (req: Request, res: Response) => {
+  try {
+    const providerId = req.providerId; // Extract providerId from authentication token
+
+    if (!providerId) {
+      return res.status(401).json({ message: "Provider ID not found" });
+    }
+
+    const providerServices = await prisma.serviceProviderMap.findMany({
+      where: { provider_id: providerId },
+      include: {
+        service: {
+          include: {
+            service_category: true,
+          },
+        },
+      },
+    });
+
+    res.json(providerServices);
+  } catch (error) {
+    console.error("Error fetching provider services:", error);
+    res.status(500).json({ message: "Error fetching provider services" });
+  }
+};
+
+const updateProviderService = async (req: Request, res: Response) => {
+  try {
+    const providerId = req.providerId;
+    const serviceProviderMapId = parseInt(req.params.id, 10);
+    const { billingRatePerHour, experienceInMonths, serviceOfferingDesc } =
+      req.body;
+
+    if (!providerId || isNaN(serviceProviderMapId)) {
+      return res.status(400).json({ message: "Invalid request" });
+    }
+
+    const updatedServiceProviderMap =
+      await prisma.serviceProviderMap.updateMany({
+        where: {
+          id: serviceProviderMapId,
+          provider_id: providerId,
+        },
+        data: {
+          billing_rate_per_hour: billingRatePerHour,
+          experience_in_months: experienceInMonths,
+          service_offering_desc: serviceOfferingDesc,
+        },
+      });
+
+    if (updatedServiceProviderMap.count === 0) {
+      return res.status(404).json({ message: "Service not found" });
+    }
+
+    res.json({ message: "Service updated successfully" });
+  } catch (error) {
+    console.error("Error updating provider service:", error);
+    res.status(500).json({ message: "Error updating provider service" });
+  }
+};
+
+const deleteProviderService = async (req: Request, res: Response) => {
+  try {
+    const providerId = req.providerId;
+    const serviceProviderMapId = parseInt(req.params.id, 10);
+
+    if (!providerId || isNaN(serviceProviderMapId)) {
+      return res.status(400).json({ message: "Invalid request" });
+    }
+
+    const deletedServiceProviderMap =
+      await prisma.serviceProviderMap.deleteMany({
+        where: {
+          id: serviceProviderMapId,
+          provider_id: providerId,
+        },
+      });
+
+    if (deletedServiceProviderMap.count === 0) {
+      return res.status(404).json({ message: "Service not found" });
+    }
+
+    res.json({ message: "Service deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting provider service:", error);
+    res.status(500).json({ message: "Error deleting provider service" });
+  }
+};
+
 export default {
   addServiceForProvider,
   getProviderRequests,
+  getProviderServices,
+  updateProviderService,
+  deleteProviderService,
 };

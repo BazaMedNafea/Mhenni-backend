@@ -7,8 +7,7 @@ const router = express.Router();
 // GET /api/public/service/list
 router.get("/list", ServicesController.getServiceProviderMapList);
 
-// // GET /api/public/service/:serviceId
-// router.get("/:serviceId", ServicesController.getServiceById);
+router.get("/:id", ServicesController.getServiceProviderMapById);
 
 // GET /api/public/service/category/:categoryId
 router.get("/category/:categoryId", ServicesController.getServicesByCategory);
