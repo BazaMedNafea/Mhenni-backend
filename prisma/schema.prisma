@@ -128,7 +128,7 @@ model Request {
   customer_id           String
   service_id            Int
   requirement_desc      String?
-  expected_start_time   DateTime
+  expected_start_time   DateTime?
   addressId             Int?
   custom_address_city   String?
   custom_address_street String?
@@ -166,8 +166,9 @@ enum UserType {
 }
 
 enum RequestState {
-  PENDING
-  ACCEPTED
+  REQUESTED
+  OFFERED
+  ONGOING
   COMPLETED
   CANCELED
   // Add more states as needed
