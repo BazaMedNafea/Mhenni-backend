@@ -1,4 +1,3 @@
-// index.ts
 import express, { Request, Response } from "express";
 import cors from "cors";
 import "dotenv/config";
@@ -11,6 +10,7 @@ import MyUserRoute from "./routes/MyUserRoute";
 import MyProviderRoute from "./routes/MyProviderRoute";
 import MyCustomerRoute from "./routes/MyCustomerRoute";
 import { v2 as cloudinary } from "cloudinary";
+
 const prisma = new PrismaClient();
 
 const app = express();
@@ -36,6 +36,5 @@ app.use("/api/my/user", MyUserRoute);
 app.use("/api/my/provider", MyProviderRoute);
 app.use("/api/my/customer", MyCustomerRoute);
 app.use("/api/my/orders", MyOrdersRoute);
-app.listen(8080, () => {
-  console.log("server started on localhost:8080");
-});
+
+export default app;
