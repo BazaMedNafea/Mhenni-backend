@@ -35,6 +35,7 @@ model Provider {
   providerRatings   Rating?
   Request           Request[]
   services          ServiceProviderMap[]
+  ProviderOffer     ProviderOffer[]
 }
 
 model Rating {
@@ -141,6 +142,17 @@ model Request {
   customer              Customer        @relation(fields: [customer_id], references: [id])
   provider              Provider?       @relation(fields: [providerId], references: [id])
   service               Service         @relation(fields: [service_id], references: [id])
+  providerOffers        ProviderOffer[]
+}
+
+model ProviderOffer {
+  id         Int      @id @default(autoincrement())
+  requestId  Int
+  providerId String
+  offerDate  DateTime
+  offerTime  DateTime
+  request    Request  @relation(fields: [requestId], references: [id])
+  provider   Provider @relation(fields: [providerId], references: [id])
 }
 
 model Appointment {

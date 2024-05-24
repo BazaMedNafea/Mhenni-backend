@@ -45,4 +45,10 @@ router.delete(
   MyProviderController.deleteProviderService
 );
 
+router.post(
+  "/request/:requestId/offer",
+  jwtCheck,
+  jwtParse,
+  MyProviderController.createProviderOffer
+);
 export default router;

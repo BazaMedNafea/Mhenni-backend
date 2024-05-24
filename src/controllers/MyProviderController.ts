@@ -1,6 +1,6 @@
 // MyProviderController.ts
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, ProviderOffer, RequestState } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const addServiceForProvider = async (req: Request, res: Response) => {
@@ -208,10 +208,69 @@ const deleteProviderService = async (req: Request, res: Response) => {
   }
 };
 
+const createProviderOffer = async (req: Request, res: Response) => {
+  try {
+    const providerId = req.providerId;
+    const requestId = parseInt(req.params.requestId, 10);
+    const { offerDates, offerTimes } = req.body;
+
+    if (!providerId || isNaN(requestId) || !offerDates || !offerTimes) {
+      return res.status(400).json({ message: "Invalid request" });
+    }
+
+    // Check if the request exists and is in the REQUESTED state
+    const request = await prisma.request.findUnique({
+      where: { id: requestId },
+      include: { providerOffers: true },
+    });
+
+    if (!request || request.state !== RequestState.REQUESTED) {
+      return res.status(400).json({ message: "Invalid request state" });
+    }
+
+    // Check if the provider has already offered for this request
+    if (
+      request.providerOffers.some((offer) => offer.providerId === providerId)
+    ) {
+      return res
+        .status(400)
+        .json({ message: "You have already offered for this request" });
+    }
+
+    // Create provider offers
+    const providerOffers: ProviderOffer[] = [];
+    for (let i = 0; i < offerDates.length && i < offerTimes.length; i++) {
+      const offerDate = new Date(offerDates[i]);
+      const offerTime = new Date(offerTimes[i]);
+      const providerOffer = await prisma.providerOffer.create({
+        data: {
+          requestId,
+          providerId,
+          offerDate,
+          offerTime,
+        },
+      });
+      providerOffers.push(providerOffer);
+    }
+
+    // Update the request state to OFFERED
+    await prisma.request.update({
+      where: { id: requestId },
+      data: { state: RequestState.OFFERED },
+    });
+
+    res.json(providerOffers);
+  } catch (error) {
+    console.error("Error creating provider offer:", error);
+    res.status(500).json({ message: "Error creating provider offer" });
+  }
+};
+
 export default {
   addServiceForProvider,
   getProviderRequests,
   getProviderServices,
   updateProviderService,
   deleteProviderService,
+  createProviderOffer,
 };
