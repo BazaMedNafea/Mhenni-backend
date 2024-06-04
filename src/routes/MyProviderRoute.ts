@@ -1,4 +1,3 @@
-// MyProviderRoute.ts
 import express from "express";
 import MyProviderController from "../controllers/MyProviderController";
 import { jwtCheck, jwtParse } from "../middleware/auth";
@@ -15,7 +14,7 @@ router.post(
 
 // Route to get provider requests
 router.get(
-  "/request",
+  "/requests",
   jwtCheck,
   jwtParse,
   MyProviderController.getProviderRequests
@@ -45,10 +44,20 @@ router.delete(
   MyProviderController.deleteProviderService
 );
 
+// Route to create a provider offer for a request
 router.post(
-  "/request/:requestId/offer",
+  "/requests/:requestId/offer",
   jwtCheck,
   jwtParse,
   MyProviderController.createProviderOffer
 );
+
+// Route to confirm request completion
+router.post(
+  "/requests/:requestId/complete",
+  jwtCheck,
+  jwtParse,
+  MyProviderController.confirmRequestCompletion
+);
+
 export default router;

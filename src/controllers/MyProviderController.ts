@@ -266,6 +266,49 @@ const createProviderOffer = async (req: Request, res: Response) => {
   }
 };
 
+const confirmRequestCompletion = async (req: Request, res: Response) => {
+  try {
+    const providerId = req.providerId;
+    const requestId = parseInt(req.params.requestId, 10);
+
+    if (!providerId || isNaN(requestId)) {
+      return res.status(400).json({ message: "Invalid request" });
+    }
+
+    // Find the request to ensure it belongs to the provider
+    const providerRequest = await prisma.request.findFirst({
+      where: {
+        id: requestId,
+        providerId: providerId,
+      },
+    });
+
+    if (!providerRequest) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    if (providerRequest.state !== RequestState.ONGOING) {
+      return res
+        .status(400)
+        .json({ message: "Request is not in an ongoing state" });
+    }
+
+    // Update the request state to COMPLETED
+    const updatedRequest = await prisma.request.update({
+      where: { id: requestId },
+      data: { providerConfirmation: true },
+    });
+
+    res.json({
+      message: "Request marked as completed",
+      request: updatedRequest,
+    });
+  } catch (error) {
+    console.error("Error confirming request completion:", error);
+    res.status(500).json({ message: "Error confirming request completion" });
+  }
+};
+
 export default {
   addServiceForProvider,
   getProviderRequests,
@@ -273,4 +316,5 @@ export default {
   updateProviderService,
   deleteProviderService,
   createProviderOffer,
+  confirmRequestCompletion,
 };

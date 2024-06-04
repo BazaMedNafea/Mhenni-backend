@@ -48,4 +48,20 @@ router.patch(
   jwtParse,
   MyCustomerController.updateRequestStatus
 );
+
+// New endpoint for confirming request completion
+router.post(
+  "/requests/:requestId/complete",
+  jwtCheck,
+  jwtParse,
+  MyCustomerController.confirmRequestCompletion
+);
+
+router.post(
+  "/requests/:requestId/reviews/add",
+  jwtCheck,
+  jwtParse,
+  MyCustomerController.addReview
+);
+
 export default router;

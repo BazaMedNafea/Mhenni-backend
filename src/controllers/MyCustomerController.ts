@@ -1,21 +1,17 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, RequestState } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const addServiceRequest = async (req: Request, res: Response) => {
+export const addServiceRequest = async (req: Request, res: Response) => {
   try {
     const { serviceId, requirementDesc, providerId, customAddress } = req.body;
-
-    // Get the customerId from the authenticated user's information
     const customerId = req.customerId;
 
-    // Validate input data
     if (!customerId || !serviceId) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // Find the customer and service objects
     const customer = await prisma.customer.findUnique({
       where: { id: customerId },
     });
@@ -27,7 +23,6 @@ const addServiceRequest = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Customer or service not found" });
     }
 
-    // Create a new service request with initial state as PENDING
     const newRequest = await prisma.request.create({
       data: {
         customer: { connect: { id: customerId } },
@@ -38,7 +33,7 @@ const addServiceRequest = async (req: Request, res: Response) => {
         custom_address_city: customAddress?.city,
         custom_address_wilaya: customAddress?.wilaya,
         custom_address_zip: customAddress?.zip,
-        state: "REQUESTED", // Set initial state
+        state: RequestState.REQUESTED,
       },
     });
 
@@ -268,6 +263,132 @@ export const updateRequestStatus = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Error updating request status" });
   }
 };
+
+export const confirmRequestCompletion = async (req: Request, res: Response) => {
+  try {
+    const customerId = req.customerId;
+    const requestId = parseInt(req.params.requestId, 10);
+
+    if (!customerId || isNaN(requestId)) {
+      return res.status(400).json({ message: "Invalid request" });
+    }
+
+    // Find the request to ensure it belongs to the customer
+    const customerRequest = await prisma.request.findFirst({
+      where: {
+        id: requestId,
+        customer_id: customerId,
+      },
+    });
+
+    if (!customerRequest) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    if (customerRequest.state !== "ONGOING") {
+      return res
+        .status(400)
+        .json({ message: "Request is not in an ongoing state" });
+    }
+
+    // Update the customerConfirmation to true
+    const updatedRequest = await prisma.request.update({
+      where: { id: requestId },
+      data: {
+        customerConfirmation: true,
+        state: "COMPLETED",
+      },
+    });
+
+    res.json({
+      message: "Customer confirmation updated",
+      request: updatedRequest,
+    });
+  } catch (error) {
+    console.error("Error updating customer confirmation:", error);
+    res.status(500).json({ message: "Error updating customer confirmation" });
+  }
+};
+
+export const addReview = async (req: Request, res: Response) => {
+  try {
+    const customerId = req.customerId;
+    const {
+      providerId,
+      requestId,
+      punctualityRating,
+      proficiencyRating,
+      etiquettesRating,
+      communicationRating,
+      priceRating,
+      overallRating,
+      comment,
+    } = req.body;
+
+    if (
+      !customerId ||
+      !providerId ||
+      !requestId ||
+      !punctualityRating ||
+      !proficiencyRating ||
+      !etiquettesRating ||
+      !communicationRating ||
+      !priceRating ||
+      !overallRating
+    ) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // Check if the request belongs to the customer
+    const customerRequest = await prisma.request.findUnique({
+      where: {
+        id: requestId,
+        customer_id: customerId,
+      },
+    });
+
+    if (!customerRequest) {
+      return res.status(404).json({
+        message: "Request not found or does not belong to the customer",
+      });
+    }
+
+    // Check if the request already has a review
+    const existingReview = await prisma.reviewLog.findUnique({
+      where: {
+        request_id: requestId,
+      },
+    });
+
+    if (existingReview) {
+      return res
+        .status(400)
+        .json({ message: "Review already exists for this request" });
+    }
+
+    // Create the review log
+    const newReview = await prisma.reviewLog.create({
+      data: {
+        provider_id: providerId,
+        request_id: requestId,
+        punctuality_rating: punctualityRating,
+        proficiency_rating: proficiencyRating,
+        etiquettes_rating: etiquettesRating,
+        communication_rating: communicationRating,
+        price_rating: priceRating,
+        overall_rating: overallRating,
+        comment: comment,
+        review_date: new Date(),
+      },
+    });
+
+    res.status(201).json(newReview);
+  } catch (error) {
+    console.error("Error adding review:", error);
+    res.status(500).json({ message: "Error adding review" });
+  }
+};
+// Export all functions including the new one
 export default {
   updateRequestStatus,
   getMyCustomerRequests,
@@ -275,4 +396,6 @@ export default {
   addServiceRequest,
   getMyOrders,
   getOrderById,
+  confirmRequestCompletion, // Add the new function here
+  addReview,
 };
