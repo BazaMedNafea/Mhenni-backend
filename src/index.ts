@@ -5,10 +5,10 @@ import { PrismaClient } from "@prisma/client";
 import categoriesRoute from "./routes/CategoriesRoute";
 import servicesRoute from "./routes/ServicesRoute";
 import providersRoute from "./routes/ProvidersRoute";
-import MyOrdersRoute from "./routes/MyOrdersRoute";
 import MyUserRoute from "./routes/MyUserRoute";
 import MyProviderRoute from "./routes/MyProviderRoute";
 import MyCustomerRoute from "./routes/MyCustomerRoute";
+import AdminRoute from "./routes/AdminRoute";
 import { v2 as cloudinary } from "cloudinary";
 
 const prisma = new PrismaClient();
@@ -35,6 +35,6 @@ app.use("/api/public/provider", providersRoute);
 app.use("/api/my/user", MyUserRoute);
 app.use("/api/my/provider", MyProviderRoute);
 app.use("/api/my/customer", MyCustomerRoute);
-app.use("/api/my/orders", MyOrdersRoute);
+app.use("/api/my/admin", AdminRoute);
 
 export default app;
