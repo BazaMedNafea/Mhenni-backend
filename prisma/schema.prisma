@@ -36,6 +36,7 @@ model Provider {
   Request           Request[]
   services          ServiceProviderMap[]
   ProviderOffer     ProviderOffer[]
+  reviews           ReviewLog[]
 }
 
 model Rating {
@@ -51,17 +52,20 @@ model Rating {
 }
 
 model ReviewLog {
-  id                     Int         @id @default(autoincrement())
-  service_appointment_id Int         @unique
-  punctuality_rating     Int
-  proficiency_rating     Int
-  etiquettes_rating      Int
-  communication_rating   Int
-  price_rating           Int
-  overall_rating         Int
-  review                 String?
-  review_date            DateTime
-  service_appointment    Appointment @relation(fields: [service_appointment_id], references: [id], onDelete: Cascade)
+  id                   Int           @id @default(autoincrement())
+  provider_id          String
+  request_id           Int           @unique
+  punctuality_rating   Int
+  proficiency_rating   Int
+  etiquettes_rating    Int
+  communication_rating Int
+  price_rating         Int
+  overall_rating       Int
+  comment              String?
+  review_date          DateTime
+  request              Request       @relation(fields: [request_id], references: [id], onDelete: Cascade)
+  provider             Provider      @relation(fields: [provider_id], references: [id])
+  Appointment          Appointment[]
 }
 
 model Category {
@@ -136,6 +140,7 @@ model Request {
   custom_address_wilaya String?
   custom_address_zip    String?
   providerId            String?
+  appointmentId         Int?
   state                 RequestState // Add state field
   DeliveryOffer         DeliveryOffer[]
   Address               Address?        @relation(fields: [addressId], references: [id])
@@ -143,6 +148,9 @@ model Request {
   provider              Provider?       @relation(fields: [providerId], references: [id])
   service               Service         @relation(fields: [service_id], references: [id])
   providerOffers        ProviderOffer[]
+  providerConfirmation  Boolean         @default(false)
+  customerConfirmation  Boolean         @default(false)
+  ReviewLog             ReviewLog?
 }
 
 model ProviderOffer {
@@ -162,7 +170,8 @@ model Appointment {
   service_start_time        DateTime
   service_end_time          DateTime?
   service_delivery_offer    DeliveryOffer @relation(fields: [service_delivery_offer_id], references: [id])
-  provider_review_log       ReviewLog?
+  provider_review_log       ReviewLog?    @relation(fields: [reviewLogId], references: [id])
+  reviewLogId               Int?
 }
 
 model Admin {
