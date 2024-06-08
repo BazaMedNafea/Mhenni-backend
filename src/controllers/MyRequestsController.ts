@@ -15,7 +15,7 @@ const getProviderRequests = async (req: Request, res: Response) => {
     const providerRequests = await prisma.request.findMany({
       where: { providerId },
       include: {
-        service: true,
+        Service: true,
         customer: {
           include: {
             user: {
