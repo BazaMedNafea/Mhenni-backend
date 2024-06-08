@@ -19,6 +19,7 @@ const getProvidersByService = async (req: Request, res: Response) => {
               select: {
                 firstName: true,
                 lastName: true,
+                bio: true,
               },
             },
           },
@@ -47,6 +48,7 @@ const getProviderById = async (req: Request, res: Response) => {
             firstName: true,
             lastName: true,
             image: true,
+            bio: true,
           },
         },
         // Include other related models as needed

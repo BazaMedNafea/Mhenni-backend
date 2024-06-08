@@ -80,7 +80,7 @@ const getCurrentUser = async (req: Request, res: Response) => {
 
 const updateCurrentUser = async (req: Request, res: Response) => {
   try {
-    const { firstName, lastName, addresses, auth0Id, type } = req.body;
+    const { firstName, lastName, addresses, auth0Id, type, bio } = req.body;
 
     if (!auth0Id) {
       return res.status(400).json({ message: "auth0Id is required" });
@@ -89,7 +89,7 @@ const updateCurrentUser = async (req: Request, res: Response) => {
     // Update user information
     const updatedUser = await prisma.user.update({
       where: { auth0Id },
-      data: { firstName, lastName, type }, // Include the 'type' field
+      data: { firstName, lastName, type, bio }, // Include the 'bio' field
       include: {
         customer: true,
         provider: true,

@@ -17,6 +17,7 @@ model User {
   lastName  String?
   mobile    String?
   image     String?
+  bio       String?
   type      UserType?
   admin     Admin?
   customer  Customer?
@@ -98,11 +99,12 @@ model ServiceProviderMap {
 }
 
 model Customer {
-  id        String    @id @default(dbgenerated("gen_random_uuid()"))
-  userId    String    @unique
-  addresses Address[]
-  user      User      @relation(fields: [userId], references: [id])
-  requests  Request[]
+  id          String    @id @default(dbgenerated("gen_random_uuid()"))
+  userId      String    @unique
+  description String?
+  addresses   Address[]
+  user        User      @relation(fields: [userId], references: [id])
+  requests    Request[]
 }
 
 model Address {

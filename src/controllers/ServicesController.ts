@@ -84,6 +84,7 @@ const getServiceProviderMapList = async (req: Request, res: Response) => {
               select: {
                 firstName: true,
                 lastName: true,
+                image: true,
               },
             },
             addresses: true,
@@ -157,6 +158,7 @@ const getServiceProviderMapById = async (req: Request, res: Response) => {
               select: {
                 firstName: true,
                 lastName: true,
+                image: true,
               },
             },
             addresses: true,
