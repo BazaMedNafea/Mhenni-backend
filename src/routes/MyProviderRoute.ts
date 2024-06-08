@@ -1,14 +1,22 @@
 import express from "express";
 import MyProviderController from "../controllers/MyProviderController";
 import { jwtCheck, jwtParse } from "../middleware/auth";
+import multer from "multer";
 
 const router = express.Router();
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+});
 
-// Route to add a service for a provider
 router.post(
   "/add-service",
   jwtCheck,
   jwtParse,
+  upload.single("serviceImage"), // Add this line
   MyProviderController.addServiceForProvider
 );
 

@@ -26,7 +26,7 @@ export const addServiceRequest = async (req: Request, res: Response) => {
     const newRequest = await prisma.request.create({
       data: {
         customer: { connect: { id: customerId } },
-        service: { connect: { id: serviceId } },
+        Service: { connect: { id: serviceId } },
         requirement_desc: requirementDesc,
         provider: { connect: { id: providerId } },
         custom_address_street: customAddress?.street,
@@ -57,7 +57,7 @@ export const getMyOrders = async (req: Request, res: Response) => {
         customer_id: customerId,
       },
       include: {
-        service: true,
+        Service: true,
         provider: {
           include: {
             user: {
@@ -95,7 +95,7 @@ export const getOrderById = async (req: Request, res: Response) => {
         customer_id: customerId,
       },
       include: {
-        service: true,
+        Service: true,
         provider: {
           include: {
             user: {
@@ -132,7 +132,7 @@ export const getMyCustomerRequests = async (req: Request, res: Response) => {
     const customerRequests = await prisma.request.findMany({
       where: { customer_id: customerId },
       include: {
-        service: true,
+        Service: true,
         provider: {
           include: {
             user: {
@@ -185,7 +185,7 @@ export const getMyCustomerRequestById = async (req: Request, res: Response) => {
         customer_id: customerId,
       },
       include: {
-        service: true,
+        Service: true,
         provider: {
           include: {
             user: {

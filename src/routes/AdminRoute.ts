@@ -53,4 +53,5 @@ router.get("/service/list", listServices); // GET /api/admin/service/list
 router.post("/services", addService); // POST /api/admin/service
 router.put("/service/:id", updateService); // PUT /api/admin/service/:id
 router.delete("/service/:id", deleteService); // DELETE /api/admin/service/:id
+
 export default router;

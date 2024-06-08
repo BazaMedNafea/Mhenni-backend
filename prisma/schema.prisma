@@ -32,11 +32,11 @@ model Provider {
   description       String?
   addresses         Address[]            @relation("ProviderAddresses")
   user              User                 @relation(fields: [userId], references: [id])
+  providerOffers    ProviderOffer[]
   providerRatings   Rating?
-  Request           Request[]
-  services          ServiceProviderMap[]
-  ProviderOffer     ProviderOffer[]
+  requests          Request[]
   reviews           ReviewLog[]
+  services          ServiceProviderMap[]
 }
 
 model Rating {
@@ -53,19 +53,19 @@ model Rating {
 
 model ReviewLog {
   id                   Int           @id @default(autoincrement())
-  provider_id          String
-  request_id           Int           @unique
   punctuality_rating   Int
   proficiency_rating   Int
   etiquettes_rating    Int
   communication_rating Int
   price_rating         Int
   overall_rating       Int
-  comment              String?
   review_date          DateTime
-  request              Request       @relation(fields: [request_id], references: [id], onDelete: Cascade)
+  comment              String?
+  provider_id          String
+  request_id           Int           @unique
+  appointments         Appointment[]
   provider             Provider      @relation(fields: [provider_id], references: [id])
-  Appointment          Appointment[]
+  request              Request       @relation(fields: [request_id], references: [id], onDelete: Cascade)
 }
 
 model Category {
@@ -91,6 +91,7 @@ model ServiceProviderMap {
   billing_rate_per_hour  Float
   experience_in_months   Int
   service_offering_desc  String?
+  image                  String?
   service_delivery_offer DeliveryOffer?
   provider               Provider       @relation(fields: [provider_id], references: [id])
   service                Service        @relation(fields: [service_id], references: [id])
@@ -123,9 +124,9 @@ model DeliveryOffer {
   service_provider_map_id Int                @unique
   discount_in_percentage  Float?
   is_offer_accepted       Boolean?
-  service_appointment     Appointment[]
+  appointments            Appointment[]
   service_provider_map    ServiceProviderMap @relation(fields: [service_provider_map_id], references: [id])
-  service_request         Request            @relation(fields: [service_request_id], references: [id])
+  Request                 Request            @relation(fields: [service_request_id], references: [id])
 }
 
 model Request {
@@ -140,17 +141,17 @@ model Request {
   custom_address_wilaya String?
   custom_address_zip    String?
   providerId            String?
+  state                 RequestState
+  customerConfirmation  Boolean         @default(false)
+  providerConfirmation  Boolean         @default(false)
   appointmentId         Int?
-  state                 RequestState // Add state field
   DeliveryOffer         DeliveryOffer[]
+  providerOffers        ProviderOffer[]
   Address               Address?        @relation(fields: [addressId], references: [id])
   customer              Customer        @relation(fields: [customer_id], references: [id])
   provider              Provider?       @relation(fields: [providerId], references: [id])
-  service               Service         @relation(fields: [service_id], references: [id])
-  providerOffers        ProviderOffer[]
-  providerConfirmation  Boolean         @default(false)
-  customerConfirmation  Boolean         @default(false)
-  ReviewLog             ReviewLog?
+  Service               Service         @relation(fields: [service_id], references: [id])
+  reviewLog             ReviewLog?
 }
 
 model ProviderOffer {
@@ -159,8 +160,8 @@ model ProviderOffer {
   providerId String
   offerDate  DateTime
   offerTime  DateTime
-  request    Request  @relation(fields: [requestId], references: [id])
   provider   Provider @relation(fields: [providerId], references: [id])
+  request    Request  @relation(fields: [requestId], references: [id])
 }
 
 model Appointment {
@@ -169,13 +170,13 @@ model Appointment {
   service_deliver_on        DateTime
   service_start_time        DateTime
   service_end_time          DateTime?
-  service_delivery_offer    DeliveryOffer @relation(fields: [service_delivery_offer_id], references: [id])
-  provider_review_log       ReviewLog?    @relation(fields: [reviewLogId], references: [id])
   reviewLogId               Int?
+  providerReviewLog         ReviewLog?    @relation(fields: [reviewLogId], references: [id])
+  serviceDeliveryOffer      DeliveryOffer @relation(fields: [service_delivery_offer_id], references: [id])
 }
 
 model Admin {
-  id     String @id @default(uuid())
+  id     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId String @unique
   user   User   @relation(fields: [userId], references: [id])
 }
@@ -192,5 +193,4 @@ enum RequestState {
   ONGOING
   COMPLETED
   CANCELED
-  // Add more states as needed
 }

@@ -1,6 +1,7 @@
 // MyProviderController.ts
 import { Request, Response } from "express";
 import { PrismaClient, ProviderOffer, RequestState } from "@prisma/client";
+import { v2 as cloudinary } from "cloudinary";
 const prisma = new PrismaClient();
 
 const addServiceForProvider = async (req: Request, res: Response) => {
@@ -11,30 +12,21 @@ const addServiceForProvider = async (req: Request, res: Response) => {
       experienceInMonths,
       serviceOfferingDesc,
     } = req.body;
-    const providerId = req.providerId; // Extract providerId from authentication token
+    const providerId = req.providerId;
+    const serviceImage = req.file as Express.Multer.File; // Get the uploaded file
 
-    // Convert serviceId to integer
     const serviceIdInt = parseInt(serviceId, 10);
-
-    if (isNaN(serviceIdInt)) {
-      return res.status(400).json({ message: "Invalid service ID" });
-    }
-
-    // Convert billingRatePerHour to float
     const billingRatePerHourFloat = parseFloat(billingRatePerHour);
-
-    if (isNaN(billingRatePerHourFloat)) {
-      return res.status(400).json({ message: "Invalid billing rate per hour" });
-    }
-
-    // Convert experienceInMonths to integer
     const experienceInMonthsInt = parseInt(experienceInMonths, 10);
 
-    if (isNaN(experienceInMonthsInt)) {
-      return res.status(400).json({ message: "Invalid experience in months" });
+    if (
+      isNaN(serviceIdInt) ||
+      isNaN(billingRatePerHourFloat) ||
+      isNaN(experienceInMonthsInt)
+    ) {
+      return res.status(400).json({ message: "Invalid request parameters" });
     }
 
-    // Check if the service exists
     const existingService = await prisma.service.findUnique({
       where: { id: serviceIdInt },
     });
@@ -43,7 +35,6 @@ const addServiceForProvider = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Service not found" });
     }
 
-    // Check if the provider already offers this service
     const existingServiceProviderMap =
       await prisma.serviceProviderMap.findFirst({
         where: {
@@ -55,17 +46,28 @@ const addServiceForProvider = async (req: Request, res: Response) => {
     if (existingServiceProviderMap) {
       return res
         .status(400)
-        .json({ message: "You already offers this service" });
+        .json({ message: "You already offer this service" });
+    }
+
+    let imageUrl = null;
+    if (serviceImage) {
+      const base64Image = Buffer.from(serviceImage.buffer).toString("base64");
+      const dataURI = `data:${serviceImage.mimetype};base64,${base64Image}`;
+
+      // Upload image to Cloudinary
+      const uploadResponse = await cloudinary.uploader.upload(dataURI);
+      imageUrl = uploadResponse.secure_url;
     }
 
     // Create a new service provider map
     const serviceProviderMap = await prisma.serviceProviderMap.create({
       data: {
         service_id: serviceIdInt,
-        provider_id: providerId, // Associate the service with the authenticated provider
+        provider_id: providerId,
         billing_rate_per_hour: billingRatePerHourFloat,
         experience_in_months: experienceInMonthsInt,
         service_offering_desc: serviceOfferingDesc,
+        image: imageUrl, // Add the image URL to the record
       },
     });
 
@@ -87,7 +89,7 @@ const getProviderRequests = async (req: Request, res: Response) => {
     const providerRequests = await prisma.request.findMany({
       where: { providerId },
       include: {
-        service: true,
+        Service: true,
         customer: {
           include: {
             user: {
